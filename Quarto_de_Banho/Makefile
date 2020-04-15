@@ -2,7 +2,7 @@
 PROG := Qn
 
 # Compiler flags.
-CFLAGS := -Wall -Wextra -Werror
+CFLAGS := -pthread -Wall -Wextra -Werror
 
 # Source files.
 SRCS := $(wildcard ./src/*.c)

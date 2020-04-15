@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "bathroomparser.h": "c",
+        "userparser.h": "c"
+    }
+}
