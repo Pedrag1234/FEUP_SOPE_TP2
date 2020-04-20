@@ -13,6 +13,15 @@ int main(int argc, char const *argv[])
         printBathroomParser(Bp);
     }
 
+    message *m = createMsg(1, 2, 30);
+    char s[256];
+
+    msg2string(m, s);
+    printf("%s\n", s);
+
+    message *m2 = string2msg(s);
+    printMsg(m2);
+
     destroyBathroomParser(Bp);
     return 0;
 }
