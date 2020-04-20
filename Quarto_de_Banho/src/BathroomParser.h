@@ -24,12 +24,32 @@ typedef struct
 
 } BathroomParser;
 
+/**
+ * @brief: Creates a struct of type BathroomParser
+ * 
+ * @return: Returns a pointer to the struct 
+ */
 BathroomParser *createBathroomParser();
 
+/**
+ * @brief: Destroys a struct of type BathroomParser
+ */
 void destroyBathroomParser(BathroomParser *Bp);
 
+/**
+ * @brief: Fills a struct of type BathroomParser
+ * 
+ * @param argc: Number args passed through cmd
+ * @param argv: Strings of the args passed
+ * @param Bp: struct to be filled
+ * 
+ * @return: 0 if it was a success and 1 if not
+ */
 int fillBathroomParser(int argc, char const *argv[], BathroomParser *Bp);
 
+/**
+ * @brief: Prints a struct of type BathroomParser
+ */
 void printBathroomParser(BathroomParser *Bp);
 
 #endif
