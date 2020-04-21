@@ -1,5 +1,5 @@
 # Program name.
-PROG := Un
+PROG := U1
 
 # Compiler flags.
 CFLAGS := -pthread -Wall -Wextra -Werror

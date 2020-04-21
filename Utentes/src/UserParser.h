@@ -2,7 +2,7 @@
 #define _USERPARSER_H_
 
 #include <stdlib.h>
-#include <string.h>
+#include <string.h> 
 #include <stdio.h>
 
 typedef struct

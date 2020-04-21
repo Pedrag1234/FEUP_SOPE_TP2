@@ -1,5 +1,5 @@
 # Program name.
-PROG := Qn
+PROG := Q1
 
 # Compiler flags.
 CFLAGS := -pthread -Wall -Wextra -Werror
