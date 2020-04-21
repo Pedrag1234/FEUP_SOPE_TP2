@@ -19,10 +19,11 @@ int main(int argc, char const *argv[])
 
         sprintf(fifoname, "/tmp/%s", Bp->fifoname);
         mkfifo(fifoname, 0666);
+        srand(time(0));
 
         request_list *r = createList();
 
-        for (int i = 1; i <= 25; i++)
+        for (int i = 1; i <= (rand() % 1024); i++)
         {
             char aux[256];
             strcpy(aux, "");
@@ -34,8 +35,9 @@ int main(int argc, char const *argv[])
         {
             printf("I = %d || String = %s\n", i, r->requests[i]);
         }
+        printf("================================================================\n");
 
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < (rand() % r->size); i++)
         {
             requestProcessed(r);
         }
