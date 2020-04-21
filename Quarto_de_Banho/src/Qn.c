@@ -11,9 +11,14 @@ int main(int argc, char const *argv[])
     else
     {
         printBathroomParser(Bp);
-        int i = 0;
         time_t start, end;
         double elapsed;
+
+        char fifoname[261];
+        strcpy(fifoname, "");
+
+        sprintf(fifoname, "/tmp/%s", Bp->fifoname);
+        mkfifo(fifoname, 0666);
 
         time(&start);
         time(&end);
