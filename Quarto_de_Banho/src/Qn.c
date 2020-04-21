@@ -11,16 +11,21 @@ int main(int argc, char const *argv[])
     else
     {
         printBathroomParser(Bp);
+        int i = 0;
+        time_t start, end;
+        double elapsed;
+
+        time(&start);
+        time(&end);
+
+        elapsed = difftime(end, start);
+        while (elapsed <= Bp->nsecs)
+        {
+            time(&end);
+            elapsed = difftime(end, start);
+            //TODO: PROCESS REQUESTS AND SEND ANSWER
+        }
     }
-
-    message *m = createMsg(1, 2, 30);
-    char s[256];
-
-    msg2string(m, s);
-    printf("%s\n", s);
-
-    message *m2 = string2msg(s);
-    printMsg(m2);
 
     destroyBathroomParser(Bp);
     return 0;
