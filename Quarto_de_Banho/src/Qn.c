@@ -11,8 +11,8 @@ int main(int argc, char const *argv[])
     else
     {
         printBathroomParser(Bp);
-        time_t start, end;
-        double elapsed;
+        //time_t start, end;
+        //double elapsed;
 
         char fifoname[261];
         strcpy(fifoname, "");
@@ -20,7 +20,33 @@ int main(int argc, char const *argv[])
         sprintf(fifoname, "/tmp/%s", Bp->fifoname);
         mkfifo(fifoname, 0666);
 
-        time(&start);
+        request_list *r = createList();
+
+        for (int i = 1; i <= 25; i++)
+        {
+            char aux[256];
+            strcpy(aux, "");
+            sprintf(aux, "%d", i);
+            addRequest(aux, r);
+        }
+
+        for (int i = 0; i < r->size; i++)
+        {
+            printf("I = %d || String = %s\n", i, r->requests[i]);
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            requestProcessed(r);
+        }
+
+        for (int i = 0; i < r->size; i++)
+        {
+            printf("I = %d || String = %s\n", i, r->requests[i]);
+        }
+
+        destroyList(r);
+        /*time(&start);
         time(&end);
 
         elapsed = difftime(end, start);
@@ -29,7 +55,7 @@ int main(int argc, char const *argv[])
             time(&end);
             elapsed = difftime(end, start);
             //TODO: PROCESS REQUESTS AND SEND ANSWER
-        }
+        }*/
     }
 
     destroyBathroomParser(Bp);
