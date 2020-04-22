@@ -1,8 +1,8 @@
 #include "message.h"
 
-message *createMsg(int i, int dur, int pl)
+Message *createMsg(int i, int dur, int pl)
 {
-    message *m = (message *)malloc(sizeof(message));
+    Message *m = (Message *)malloc(sizeof(Message));
 
     m->i = i;
     m->pid = getpid();
@@ -13,17 +13,17 @@ message *createMsg(int i, int dur, int pl)
     return m;
 }
 
-void printMsg(message *m)
+void printMsg(Message *m)
 {
     printf("I = %d \t PID = %d \t TID = %d \t Dur = %d \t Pl = %d\n", m->i, m->pid, m->tid, m->dur, m->pl);
 }
 
-void destroyMsg(message *m)
+void destroyMsg(Message *m)
 {
     free(m);
 }
 
-void msg2string(message *m, char *str)
+void msg2string(Message *m, char *str)
 {
     char aux[256];
     strcpy(aux, "");
@@ -32,9 +32,9 @@ void msg2string(message *m, char *str)
     strcpy(str, aux);
 }
 
-message *string2msg(char *str)
+Message *string2msg(char *str)
 {
-    message *m = (message *)malloc(sizeof(message));
+    Message *m = (Message *)malloc(sizeof(Message));
     int i = 0, pid = 0, tid = 0, dur = 0, pl = 0;
 
     sscanf(str, "[%d,%d,%d,%d,%d]", &i, &pid, &tid, &dur, &pl);

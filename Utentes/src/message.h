@@ -8,14 +8,14 @@
 #include <unistd.h>
 #include <pthread.h>
 
-typedef struct message
+typedef struct Message
 {
     int i;
     int pid;
     int tid;
     int dur;
     int pl;
-} message;
+} Message;
 
 /**
  * @brief: creates a struct of type message
@@ -26,21 +26,21 @@ typedef struct message
  * 
  * @return: pointer to the created struct 
  */
-message *createMsg(int i, int dur, int pl);
+Message *createMsg(int i, int dur, int pl);
 
 /**
  * @brief: prints a struct of type message
  * 
  * @param m: the struct to print
  */
-void printMsg(message *m);
+void printMsg(Message *m);
 
 /**
  * @brief: destroys a struct of type message
  * 
  * @param m: the struct to be destroyed
  */
-void destroyMsg(message *m);
+void destroyMsg(Message *m);
 
 /**
  * @brief: parses a struct message to a string 
@@ -48,7 +48,7 @@ void destroyMsg(message *m);
  * @param m: struct to be parse
  * @param str: the result string
  */
-void msg2string(message *m, char *str);
+void msg2string(Message *m, char *str);
 
 /**
  * @brief: parses a string to a struct message 
@@ -57,6 +57,6 @@ void msg2string(message *m, char *str);
  * 
  * @return returns an instance of message
  */
-message *string2msg(char *str);
+Message *string2msg(char *str);
 
 #endif
