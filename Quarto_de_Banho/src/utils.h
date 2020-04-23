@@ -6,6 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /**
  * @brief: checks if a string is made out entirely of digits
@@ -30,7 +31,6 @@ char *subString(const char *input, int offset, int len, char *dest);
 
 void copyArray(int *dst, int *src);
 
-
 /**
  * @brief: writes the log msgs to the fd. 
  * 
@@ -43,8 +43,7 @@ void copyArray(int *dst, int *src);
  * @return: none
  * 
 */
-void log(int tid, int i, int dur, int pl, char *oper);
-
+void logReg(int tid, int i, int dur, int pl, char *oper);
 
 /**
  * @brief: creates name for fifo according to spec
@@ -55,6 +54,6 @@ void log(int tid, int i, int dur, int pl, char *oper);
  * @return: name generated
  * 
 */
-char * genName(int pid, int tid);
+void genName(int pid, int tid, char *str);
 
 #endif

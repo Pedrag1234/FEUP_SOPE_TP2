@@ -1,5 +1,12 @@
 #include "Qn.h"
 
+void *processRequest(void *arg)
+{
+    char *request = (char *)arg;
+
+    return NULL;
+}
+
 int main(int argc, char const *argv[])
 {
     BathroomParser *Bp = createBathroomParser();
@@ -11,6 +18,7 @@ int main(int argc, char const *argv[])
     else
     {
         printBathroomParser(Bp);
+        pthread_t thread;
         time_t start, end;
         double elapsed;
 
@@ -20,6 +28,16 @@ int main(int argc, char const *argv[])
         sprintf(fifoname, "/tmp/%s", Bp->fifoname);
         mkfifo(fifoname, 0666);
 
+        int fd = open(fifoname, O_RDONLY | O_NONBLOCK);
+
+        if (fd < 0)
+        {
+            printf("Could not open FIFO. Exiting ...\n");
+            exit(1);
+        }
+
+        char request[256];
+
         time(&start);
         time(&end);
 
@@ -28,7 +46,20 @@ int main(int argc, char const *argv[])
         {
             time(&end);
             elapsed = difftime(end, start);
-            //TODO: PROCESS REQUESTS AND SEND ANSWER
+            read(fd, request, 256);
+            if (strlen(request) > 0)
+            {
+                int i = 0;
+                while (pthread_create(&thread, NULL, processRequest, request))
+                {
+                    if (i == 5)
+                    {
+                        printf("Error creating thread. Exiting ...\n");
+                        exit(1);
+                    }
+                    i++;
+                }
+            }
         }
     }
 
