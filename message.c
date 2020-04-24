@@ -1,8 +1,8 @@
 #include "message.h"
 
-Message *createMsg(int i, int dur, int pl)
+message *createMsg(int i, int dur, int pl)
 {
-    Message *m = (Message *)malloc(sizeof(Message));
+    message *m = (message *)malloc(sizeof(message));
 
     m->i = i;
     m->pid = getpid();
@@ -13,28 +13,28 @@ Message *createMsg(int i, int dur, int pl)
     return m;
 }
 
-void printMsg(Message *m)
+void printMsg(message *m)
 {
     printf("I = %d \t PID = %d \t TID = %d \t Dur = %d \t Pl = %d\n", m->i, m->pid, m->tid, m->dur, m->pl);
 }
 
-void destroyMsg(Message *m)
+void destroyMsg(message *m)
 {
     free(m);
 }
 
-void msg2string(Message *m, char *str)
+void msg2string(message *m, char *str)
 {
     char aux[256];
     strcpy(aux, "");
 
-    printf(aux, "[%d,%d,%d,%d,%d]", m->i, m->pid, m->tid, m->dur, m->pl);
+    sprintf(aux, "[%d,%d,%d,%d,%d]", m->i, m->pid, m->tid, m->dur, m->pl);
     strcpy(str, aux);
 }
 
-Message *string2msg(char *str)
+message *string2msg(char *str)
 {
-    Message *m = (Message *)malloc(sizeof(Message));
+    message *m = (message *)malloc(sizeof(message));
     int i = 0, pid = 0, tid = 0, dur = 0, pl = 0;
 
     sscanf(str, "[%d,%d,%d,%d,%d]", &i, &pid, &tid, &dur, &pl);
