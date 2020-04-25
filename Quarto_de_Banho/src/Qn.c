@@ -17,13 +17,30 @@ void *processRequest(void *arg)
     char prvt_fifoname[261];
     genName(req->pid,req->tid,prvt_fifoname);
 
-    printf("Fifoname = %s\n",prvt_fifoname);
+    int fd = open(prvt_fifoname, O_WRONLY);
+
+    if (fd < 0)
+    {
+        printf("Could not open FIFO. Exiting ...\n");
+        return NULL;
+    }
+    
 
     struct Message *res = createMsg(req->i,req->dur,req_num);
+    char s_res[256];
+    msg2string(res,s_res);
+
+    write(fd,s_res,sizeof(s_res));
+
     sleep(res->dur);
-    printf("Response:\n");
-    printMsg(res);
+    //printf("Response:\n");
+    //printMsg(res);
     
+    if (close(fd) != 0)
+    {
+        printf("Could not close FIFO. Exiting ...\n");
+        return NULL;
+    }
     
     
     return NULL;
@@ -50,7 +67,13 @@ int main(int argc, char const *argv[])
         sprintf(fifoname, "/tmp/%s", Bp->fifoname);
         mkfifo(fifoname, 0666);
 
+        //TEST
+        mkfifo("/tmp/2.3", 0666);
+
         int fd = open(fifoname, O_RDONLY | O_NONBLOCK);
+        
+        //TEST
+        int fd_test = open("/tmp/2.3", O_RDONLY | O_NONBLOCK);
 
         if (fd < 0)
         {
@@ -83,6 +106,9 @@ int main(int argc, char const *argv[])
                     i++;
                 }
             }
+            //TEST
+            read(fd_test, request, 256);
+            printf("RESPONSE = %s\n",request);
         }
         for (int i = 0; i < req_num; i++)
         {
