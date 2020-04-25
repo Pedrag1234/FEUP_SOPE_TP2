@@ -1,8 +1,6 @@
 #include "Un.h"
-#include <stdio.h>
-#include <time.h>
 
-int launchThreads(user *us)
+int launchThreads(User * user)
 {
     clock_t start_time;
     double time_elapsed = 0.0;
@@ -10,7 +8,7 @@ int launchThreads(user *us)
     double time_last_thread = 0.0;
     start_time = clock()/1000;//ms
 
-    while(time_elapsed < us->nsecs*1000)//ms
+    while(time_elapsed < user->nsecs*1000)//ms
     {
         time_elapsed = 1000*(((double) (clock() - start_time)) / CLOCKS_PER_SEC);//ms
 
@@ -25,26 +23,21 @@ int launchThreads(user *us)
     return 0;
 }
 
-void printUsage()
-{
-    printf("Usage: ./Un <-t nsecs> fifoname\n");
-}
-
 int main(int argc, char const *argv[])
 {
-    user *us = createUser();
-    if (fillUser(us, argc, argv) != 0 || strlen(us->fifoname) == 0 || us->nsecs == 0)
+    User * user = createUser();
+    if (fillUser(user, argc, argv) != 0 || strlen(user->fifoname) == 0 || user->nsecs == 0)
     {
-        printUsage();
+        printUsageClient();
     }
     else
     {
-        printUser(us);
+        printUser(user);
     }
 
-    launchThreads(us);
+    launchThreads(user);
    
-    destroyUser(us);
+    destroyUser(user);
     return 0;
     
 }

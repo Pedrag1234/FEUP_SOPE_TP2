@@ -5,7 +5,7 @@
 #include <time.h>
 #include <pthread.h>
 #include "BathroomParser.h"
-#include "message.h"
+#include "../message.h"
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -14,6 +14,5 @@
 
 #define MAXTHREADS 1000000
 
-void printUsage();
 
 #endif

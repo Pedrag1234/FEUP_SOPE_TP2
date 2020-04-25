@@ -4,8 +4,9 @@
 #define MAX_TIME_BETWEEN_THREADS 999
 #define MIN_TIME_BETWEEN_THREADS 200
 
+#include <stdio.h>
+#include <time.h>
 #include "UserParser.h"
-
-void printUsage();
+#include "../utils.h"
 
 #endif

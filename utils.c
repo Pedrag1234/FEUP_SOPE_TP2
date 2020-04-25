@@ -55,3 +55,13 @@ void genName(int pid, int tid, char *str)
 
     strcpy(str, fifo);
 }
+
+void printUsageClient()
+{
+    printf("Usage: ./Un <-t nsecs> fifoname\n");
+}
+
+void printUsageServer()
+{
+    printf("./Qn <-t nsecs> [-l nplaces] [-n nthreads] fifoname\n");
+}

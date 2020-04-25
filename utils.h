@@ -56,4 +56,15 @@ void logReg(int tid, int i, int dur, int pl, char *oper);
 */
 void genName(int pid, int tid, char *str);
 
+/**
+ * @brief: prints how to use the command for the Client Program
+ */
+void printUsageClient();
+
+/**
+ * @brief: prints how to use the command for the Server Program
+ * 
+*/
+void printUsageServer();
+
 #endif

@@ -9,11 +9,11 @@ typedef struct
 {
     int nsecs;
     char fifoname[256];
-} user;
+} User;
 
-void destroyUser(user *us);
-int fillUser(user *us, int argc, char const *argv[]);
-void printUser(user *us);
-user *createUser(); 
+void destroyUser(User * user);
+int fillUser(User * user, int argc, char const *argv[]);
+void printUser(User * user);
+User *createUser(); 
 
 #endif

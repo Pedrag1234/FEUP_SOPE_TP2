@@ -1,11 +1,11 @@
 # Program name.
-PROG := U1
+PROG := Q1
 
 # Compiler flags.
 CFLAGS := -pthread -Wall -Wextra -Werror
 
 # Source files.
-SRCS := $(wildcard ./src/*.c)
+SRCS := $(wildcard ../*.c *.c)
 
 # Generate .o and .d filenames for each .cpp file.
 # Doesn't generate the ACTUAL files (compiler does).
