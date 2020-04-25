@@ -1,9 +1,31 @@
 #include "Qn.h"
 
+pthread_t threads[MAXTHREADS];
+
+int req_num = 0;
+
 void *processRequest(void *arg)
 {
     char *request = (char *)arg;
 
+    struct Message *req = string2msg(request);
+    printf("Request:\n");
+    printMsg(req);
+
+    req_num++;
+
+    char prvt_fifoname[261];
+    genName(req->pid,req->tid,prvt_fifoname);
+
+    printf("Fifoname = %s\n",prvt_fifoname);
+
+    struct Message *res = createMsg(req->i,req->dur,req_num);
+    sleep(res->dur);
+    printf("Response:\n");
+    printMsg(res);
+    
+    
+    
     return NULL;
 }
 
@@ -18,7 +40,7 @@ int main(int argc, char const *argv[])
     else
     {
         printBathroomParser(Bp);
-        pthread_t thread;
+        //pthread_t thread;
         time_t start, end;
         double elapsed;
 
@@ -47,10 +69,11 @@ int main(int argc, char const *argv[])
             time(&end);
             elapsed = difftime(end, start);
             read(fd, request, 256);
+            strcpy(request,"[1,2,3,4,5]");
             if (strlen(request) > 0)
             {
                 int i = 0;
-                while (pthread_create(&thread, NULL, processRequest, request))
+                while (pthread_create(&threads[req_num], NULL, processRequest, request))
                 {
                     if (i == 5)
                     {
@@ -61,6 +84,11 @@ int main(int argc, char const *argv[])
                 }
             }
         }
+        for (int i = 0; i < req_num; i++)
+        {
+            pthread_join(threads[i],NULL);
+        }
+        
     }
 
     destroyBathroomParser(Bp);

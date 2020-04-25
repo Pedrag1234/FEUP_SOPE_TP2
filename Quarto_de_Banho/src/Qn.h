@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define MAXTHREADS 1000000
+
 void printUsage();
 
 #endif
