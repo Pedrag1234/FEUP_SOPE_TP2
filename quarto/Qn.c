@@ -1,6 +1,8 @@
 #include "Qn.h"
 
-pthread_t threads[MAXTHREADS];
+
+
+pthread_t *threads;
 
 int req_num = 0;
 
@@ -17,11 +19,11 @@ void *processRequest(void *arg)
     char prvt_fifoname[261];
     genName(req->pid,req->tid,prvt_fifoname);
 
-    int fd = open(prvt_fifoname, O_WRONLY);
+    int fd = open(prvt_fifoname, O_WRONLY | O_NONBLOCK);
 
     if (fd < 0)
     {
-        printf("Could not open FIFO. Exiting ...\n");
+        printf("Thread could not open FIFO. Exiting ...\n");
         return NULL;
     }
     
@@ -38,7 +40,7 @@ void *processRequest(void *arg)
     
     if (close(fd) != 0)
     {
-        printf("Could not close FIFO. Exiting ...\n");
+        printf("Thread could not close FIFO. Exiting ...\n");
         return NULL;
     }
     
@@ -57,9 +59,9 @@ int main(int argc, char const *argv[])
     else
     {
         printBathroomParser(Bp);
-        //pthread_t thread;
         time_t start, end;
         double elapsed;
+
 
         char fifoname[261];
         strcpy(fifoname, "");
@@ -67,52 +69,75 @@ int main(int argc, char const *argv[])
         sprintf(fifoname, "/tmp/%s", Bp->fifoname);
         mkfifo(fifoname, 0666);
 
-        //TEST
-        mkfifo("/tmp/2.3", 0666);
-
         int fd = open(fifoname, O_RDONLY | O_NONBLOCK);
-        
-        //TEST
-        int fd_test = open("/tmp/2.3", O_RDONLY | O_NONBLOCK);
 
         if (fd < 0)
         {
-            printf("Could not open FIFO. Exiting ...\n");
+            printf("Could not open public FIFO. Exiting ...\n");
             exit(1);
         }
+
+        threads = calloc(INITARRAY,sizeof(pthread_t));
 
         char request[256];
 
         time(&start);
         time(&end);
-
+        int m = 0;
         elapsed = difftime(end, start);
+        
         while (elapsed <= Bp->nsecs)
         {
+            m++;
             time(&end);
             elapsed = difftime(end, start);
             read(fd, request, 256);
-            strcpy(request,"[1,2,3,4,5]");
+
+            //If a request exists
             if (strlen(request) > 0)
             {
                 int i = 0;
-                while (pthread_create(&threads[req_num], NULL, processRequest, request))
-                {
+                int err = -1;
+                pthread_t p;
+                
+                //Creates threads
+                do{
+                    
+                    err = pthread_create(&p, NULL, processRequest, request);
+                    i++;
                     if (i == 5)
                     {
-                        printf("Error creating thread. Exiting ...\n");
+                        printf("Error creating threads\n");
                         exit(1);
                     }
-                    i++;
+                } while (err != 0);
+                
+                if (req_num < INITARRAY)
+                {
+                    threads[req_num] = p;
+                }
+                else
+                {
+                    threads = (pthread_t*) realloc(threads, sizeof(pthread_t) * (req_num + 1));
+                
+                    if (*threads)
+                    {
+                        threads[req_num] = p;
+                    }
+                    else
+                    {
+                        printf("Error reallocating thread array. Exiting ...\n");
+                        exit(1);
+                    }
                 }
             }
-            //TEST
-            read(fd_test, request, 256);
-            printf("RESPONSE = %s\n",request);
+
         }
-        for (int i = 0; i < req_num; i++)
+        //Joins all threads
+        for (int j = 0; j < req_num; j++)
         {
-            pthread_join(threads[i],NULL);
+            pthread_join(threads[j],NULL);
+
         }
         
     }
