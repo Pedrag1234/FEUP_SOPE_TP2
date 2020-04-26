@@ -1,8 +1,10 @@
 #include "Un.h"
 
-void * sendRequest (void *arg)
-{
-    int fd;
+//this fd must be global to guarantee we are writing to the right place
+int fd;
+
+void * sendRequest (void *arg) {
+    int fd_local;
     time_t t;
     //seeding the rand func
     srand((unsigned) time(&t));
@@ -17,32 +19,29 @@ void * sendRequest (void *arg)
 
     write(fd, &message, sizeof(message));
 
-    /*
-    clock_t start_time;
-    double time_elapsed = 0.0;
-    double time_delta_next_thread;
-    double time_last_thread = 0.0;
-    start_time = clock()/1000;//ms
+    char localFifo[64];
+    genName(message.pid, message.tid, localFifo);
+    mkfifo(localFifo, 0666);
+    fd_local = open(localFifo, O_RDONLY | O_NONBLOCK);
 
-    while(time_elapsed < user->nsecs*1000)//ms
+    while (read(fd_local, & message, sizeof(message)) <= 0) {
+        usleep(10000);
+    }
+
+    if(message.pl != -1)
     {
-        time_elapsed = 1000*(((double) (clock() - start_time)) / CLOCKS_PER_SEC);//ms
+        printf("IN!\n");
+    }
 
-        if((clock()/1000 - time_last_thread) > time_delta_next_thread)
-        {
-            srand(time(0));
-            time_delta_next_thread = rand()%(MAX_TIME_BETWEEN_THREADS - MIN_TIME_BETWEEN_THREADS + 1) + MIN_TIME_BETWEEN_THREADS;//ms
-            time_last_thread = clock()/1000;
-        }
-    } 
-    */
+    close(fd_local);
+    unlink(localFifo);
 
-
-    return 0;
+   return NULL;
 }
 
 int main(int argc, char const *argv[])
 {
+    printf("Hello\n");
     User * user = createUser();
     if (fillUser(user, argc, argv) != 0 || strlen(user->fifoname) == 0 || user->nsecs == 0)
     {
@@ -50,9 +49,41 @@ int main(int argc, char const *argv[])
         destroyUser(user);
         return -1;
     }
+
+    printf("Hello1\n");
     
     printUser(user);
+    int currentTime = 0, i = 1;
+    int maxTime = user->nsecs;
+    char fifoname[64];
+    strcpy(fifoname, user->fifoname);
+
+    printf("%s\n", fifoname);
    
+    do
+    {
+        fd = open(fifoname, O_WRONLY | O_NONBLOCK);
+
+        if (fd == -1) {
+            printf("Connecting, please wait...\n");
+            sleep(5);
+        }
+
+    } while (fd == -1);
+
+    printf("Hello3\n");
+
+    while (currentTime < maxTime)
+    {
+        pthread_t tid;
+        pthread_create(&tid, NULL, sendRequest, (void *) & i); //no point in sending more of info, just the i value
+        i++;
+        currentTime += 1;
+        usleep(1000000); //time in microsseconds
+    }
+
+    close(fd);
+
     destroyUser(user);
-    return 0;  
+    pthread_exit(0);  
 }
