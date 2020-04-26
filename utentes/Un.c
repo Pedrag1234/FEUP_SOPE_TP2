@@ -1,7 +1,23 @@
 #include "Un.h"
 
-int launchThreads(User * user)
+void * sendRequest (void *arg)
 {
+    int fd;
+    time_t t;
+    //seeding the rand func
+    srand((unsigned) time(&t));
+
+    Message message;
+    message.i = *(int *) arg;
+    message.pid = getpid();
+    message.tid = pthread_self();
+    //user sends -1 in place
+    message.pl = -1;
+    message.dur = (rand() % 500001) + 10000;
+
+    write(fd, &message, sizeof(message));
+
+    /*
     clock_t start_time;
     double time_elapsed = 0.0;
     double time_delta_next_thread;
@@ -17,9 +33,11 @@ int launchThreads(User * user)
             srand(time(0));
             time_delta_next_thread = rand()%(MAX_TIME_BETWEEN_THREADS - MIN_TIME_BETWEEN_THREADS + 1) + MIN_TIME_BETWEEN_THREADS;//ms
             time_last_thread = clock()/1000;
-            /* launch thread */
         }
     } 
+    */
+
+
     return 0;
 }
 
@@ -29,15 +47,12 @@ int main(int argc, char const *argv[])
     if (fillUser(user, argc, argv) != 0 || strlen(user->fifoname) == 0 || user->nsecs == 0)
     {
         printUsageClient();
+        destroyUser(user);
+        return -1;
     }
-    else
-    {
-        printUser(user);
-    }
-
-    launchThreads(user);
+    
+    printUser(user);
    
     destroyUser(user);
-    return 0;
-    
+    return 0;  
 }
