@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -54,7 +55,7 @@ void logReg(int tid, int i, int dur, int pl, char *oper);
  * @return: name generated
  * 
 */
-void genName(int pid, int tid, char *str);
+void genName(pid_t pid, pthread_t tid, char *str);
 
 /**
  * @brief: prints how to use the command for the Client Program

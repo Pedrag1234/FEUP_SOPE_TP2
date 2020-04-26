@@ -15,7 +15,7 @@ Message *createMsg(int i, int dur, int pl)
 
 void printMsg(Message *m)
 {
-    printf("I = %d \t PID = %d \t TID = %d \t Dur = %d \t Pl = %d\n", m->i, m->pid, m->tid, m->dur, m->pl);
+    printf("I = %d \t PID = %d \t TID = %ld \t Dur = %d \t Pl = %d\n", m->i, m->pid, m->tid, m->dur, m->pl);
 }
 
 void destroyMsg(Message *m)
@@ -28,7 +28,7 @@ void msg2string(Message *m, char *str)
     char aux[256];
     strcpy(aux, "");
 
-    sprintf(aux, "[%d,%d,%d,%d,%d]", m->i, m->pid, m->tid, m->dur, m->pl);
+    sprintf(aux, "[%d,%d,%ld,%d,%d]", m->i, m->pid, m->tid, m->dur, m->pl);
     strcpy(str, aux);
 }
 

@@ -43,12 +43,12 @@ void logReg(int tid, int i, int dur, int pl, char *oper)
     write(STDOUT_FILENO, message, strlen(message));
 }
 
-void genName(int pid, int tid, char *str)
+void genName(pid_t pid, pthread_t tid, char *str)
 {
     char spid[32], stid[32];
     char fifo[64] = "/tmp/";
     sprintf(spid, "%d", pid);
-    sprintf(stid, "%d", tid);
+    sprintf(stid, "%ld", tid);
     strcat(fifo, spid);
     strcat(fifo, ".");
     strcat(fifo, stid);

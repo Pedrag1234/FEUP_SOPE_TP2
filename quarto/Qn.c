@@ -1,10 +1,5 @@
 #include "Qn.h"
 
-//pthread_t threads[MAXTHREADS];
-
-//order number
-int req_num = 0;
-
 //time is how long the server has been open, open_time is the max time the server CAN be open
 int currentTime, open_time;
 
@@ -12,8 +7,8 @@ void * processRequest(void *arg) {
     Message * message = ( Message *) arg;
     int fd;
     char localFIFO[64];
-
-    printMsg(message);
+    //order number
+    int req_num = 0;
 
     genName(message->pid, message->tid, localFIFO);
 
@@ -22,6 +17,8 @@ void * processRequest(void *arg) {
     message->tid = pthread_self();
 
     if(currentTime < open_time) {
+        //for some reason, not updating the place...
+        printf("Hello\n");
         req_num++;
         message->pl = req_num;
         currentTime += message->dur;
@@ -30,6 +27,12 @@ void * processRequest(void *arg) {
 
     do {
         fd = open(localFIFO, O_WRONLY);
+
+        if (fd == -1) {
+            printf("Connecting to PRIVATE FIFO, please wait...\n");
+            sleep(5);
+        }
+
     } while (fd == -1);
     
     write(fd, message, sizeof(message));
@@ -57,11 +60,14 @@ int main(int argc, char const *argv[]) {
     char fifoname[64];
     strcpy(fifoname,bp->fifoname);
 
-    Message message;
-    mkfifo(fifoname, 0660);
-    //for testing use non block but after we should remove it
+    if (mkfifo(fifoname, 0660) != 0) {
+        printf("Error creating public FIFO, exiting...\n");
+        exit(1);
+    }
+
     int fd = open(fifoname, O_RDONLY);
 
+    Message message;
     while(read(fd, & message, sizeof(message) )>0) {
         pthread_t tid;
         //message must be void pointer because of the function create  
@@ -72,5 +78,5 @@ int main(int argc, char const *argv[]) {
     unlink(fifoname);
 
     destroyBathroomParser(bp);
-    pthread_exit(0);
+    exit(0);
 }

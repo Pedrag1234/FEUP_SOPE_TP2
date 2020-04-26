@@ -17,12 +17,20 @@ void * sendRequest (void *arg) {
     message.pl = -1;
     message.dur = (rand() % 500001) + 10000;
 
+    printMsg(&message);
+
     write(fd, &message, sizeof(message));
 
     char localFifo[64];
     genName(message.pid, message.tid, localFifo);
-    mkfifo(localFifo, 0666);
+    
+    if (mkfifo(localFifo, 0660) != 0) {
+        printf("Error creating private FIFO\n");
+        exit(1);
+    }
+
     fd_local = open(localFifo, O_RDONLY | O_NONBLOCK);
+
 
     while (read(fd_local, & message, sizeof(message)) <= 0) {
         usleep(10000);
@@ -35,13 +43,11 @@ void * sendRequest (void *arg) {
 
     close(fd_local);
     unlink(localFifo);
-
-   return NULL;
+    return NULL;
 }
 
 int main(int argc, char const *argv[])
 {
-    printf("Hello\n");
     User * user = createUser();
     if (fillUser(user, argc, argv) != 0 || strlen(user->fifoname) == 0 || user->nsecs == 0)
     {
@@ -49,41 +55,34 @@ int main(int argc, char const *argv[])
         destroyUser(user);
         return -1;
     }
-
-    printf("Hello1\n");
     
     printUser(user);
     int currentTime = 0, i = 1;
     int maxTime = user->nsecs;
     char fifoname[64];
     strcpy(fifoname, user->fifoname);
-
-    printf("%s\n", fifoname);
    
     do
     {
         fd = open(fifoname, O_WRONLY | O_NONBLOCK);
 
         if (fd == -1) {
-            printf("Connecting, please wait...\n");
+            printf("Connecting to PUBLIC FIFO, please wait...\n");
             sleep(5);
         }
 
     } while (fd == -1);
 
-    printf("Hello3\n");
-
     while (currentTime < maxTime)
     {
         pthread_t tid;
-        pthread_create(&tid, NULL, sendRequest, (void *) & i); //no point in sending more of info, just the i value
+        pthread_create(&tid, NULL, sendRequest, (void *) & i); //no point in sending more of info, just the id value
         i++;
         currentTime += 1;
         usleep(1000000); //time in microsseconds
     }
 
     close(fd);
-
     destroyUser(user);
-    pthread_exit(0);  
+    exit(0);  
 }
