@@ -1,14 +1,13 @@
 #include "Qn.h"
 
 //time is how long the server has been open, open_time is the max time the server CAN be open
-int currentTime, open_time;
+int currentTime, open_time, req_num = 0;
+pthread_mutex_t req_num_lock;
 
 void * processRequest(void *arg) {
     Message * message = ( Message *) arg;
     int fd;
     char localFIFO[64];
-    //order number
-    int req_num = 0;
 
     genName(message->pid, message->tid, localFIFO);
 
@@ -17,9 +16,12 @@ void * processRequest(void *arg) {
     message->tid = pthread_self();
 
     if(currentTime < open_time) {
-        //for some reason, not updating the place...
-        printf("Hello\n");
+        
+        //Increments request number 
+        pthread_mutex_lock(&req_num_lock);
         req_num++;
+        pthread_mutex_unlock(&req_num_lock);
+
         message->pl = req_num;
         currentTime += message->dur;
         usleep(message->dur * 1000); //use usleep bc time should be in the order of miliseconds and usleep is more precise
@@ -65,6 +67,12 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
 
+    if (pthread_mutex_init(&req_num_lock, NULL) != 0)
+    {
+        printf("Mutex init failed, exiting...\n");
+        exit(1);
+    }
+
     int fd = open(fifoname, O_RDONLY);
 
     Message message;
@@ -75,6 +83,7 @@ int main(int argc, char const *argv[]) {
     }
 
     close(fd);
+    pthread_mutex_destroy(&req_num_lock);
     unlink(fifoname);
 
     destroyBathroomParser(bp);
