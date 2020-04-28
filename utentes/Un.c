@@ -2,6 +2,8 @@
 
 //this fd must be global to guarantee we are writing to the right place
 int fd;
+long int n_threads = 0;
+pthread_t * threads;
 
 void * sendRequest (void *arg) {
     int fd_local;
@@ -35,6 +37,7 @@ void * sendRequest (void *arg) {
     while (read(fd_local, & message, sizeof(message)) <= 0) {
         usleep(10000);
     }
+    printMsg(&message);
 
     if(message.pl != -1)
     {
@@ -73,13 +76,42 @@ int main(int argc, char const *argv[])
 
     } while (fd == -1);
 
+    threads = calloc(INITARRAY,sizeof(pthread_t));
+
     while (currentTime < maxTime)
     {
+
         pthread_t tid;
         pthread_create(&tid, NULL, sendRequest, (void *) & i); //no point in sending more of info, just the id value
+        if (n_threads < INITARRAY)
+        {
+            threads[n_threads] = tid;
+        }
+        else
+        {
+            threads = (pthread_t*) realloc(threads, sizeof(pthread_t) * (n_threads + 1));
+            if (*threads)
+            {
+                threads[n_threads] = tid;
+            }
+            else
+            {
+                printf("Error reallocating thread array. Exiting ...\n");
+                exit(1);
+            }
+        }
+        n_threads++;
+
+
         i++;
         currentTime += 1;
         usleep(1000000); //time in microsseconds
+    }
+
+    for (int i = 0; i < n_threads; i++)
+    {
+        printf("I = %d || tid = %ld\n",i, threads[i]);
+        pthread_join(threads[i],NULL);
     }
 
     close(fd);

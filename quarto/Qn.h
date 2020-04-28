@@ -13,7 +13,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define MAXTHREADS 1000000
+#define INITARRAY 1000000
 
 
 #endif

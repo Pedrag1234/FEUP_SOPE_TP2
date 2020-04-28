@@ -18,4 +18,6 @@
 #include "../utils.h"
 #include "../message.h"
 
+#define INITARRAY 1000000
+
 #endif

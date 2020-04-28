@@ -4,7 +4,9 @@
 clock_t start,currentTime;
 float open_time = 0;
 
-int  req_num = 0;
+pthread_t * threads;
+
+long int  req_num = 0;
 pthread_mutex_t req_num_lock;
 
 void * processRequest(void *arg) {
@@ -76,15 +78,47 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
 
+    threads = calloc(INITARRAY,sizeof(pthread_t));
+
     int fd = open(fifoname, O_RDONLY);
 
     Message message;
     while(read(fd, & message, sizeof(message) )>0) {
         currentTime = clock();
+        printMsg(&message);
+
+
         pthread_t tid;
         //message must be void pointer because of the function create  
         pthread_create(& tid, NULL, processRequest, (void *) & message);
+
+        if (req_num < INITARRAY)
+        {
+            threads[req_num] = tid;
+        }
+        else
+        {
+            threads = (pthread_t*) realloc(threads, sizeof(pthread_t) * (req_num + 1));
+            if (*threads)
+            {
+                threads[req_num] = tid;
+            }
+            else
+            {
+                printf("Error reallocating thread array. Exiting ...\n");
+                exit(1);
+            }
+        }
     }
+    printf("==========================================================\n");
+
+
+    for (int i = 0; i < req_num; i++)
+    {
+        printf("I = %d || tid = %ld\n",i, threads[i]);
+        pthread_join(threads[i],NULL);
+    }
+    
 
     close(fd);
     pthread_mutex_destroy(&req_num_lock);
