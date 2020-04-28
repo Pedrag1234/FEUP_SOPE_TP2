@@ -1,147 +1,129 @@
 #include "Qn.h"
 
+//time is how long the server has been open, open_time is the max time the server CAN be open
+clock_t start,currentTime;
+float open_time = 0;
 
+pthread_t * threads;
 
-pthread_t *threads;
+long int  req_num = 0;
+pthread_mutex_t req_num_lock;
 
-int req_num = 0;
+void * processRequest(void *arg) {
+    Message * message = ( Message *) arg;
+    int fd;
+    char localFIFO[64];
 
-void *processRequest(void *arg)
-{
-    char *request = (char *)arg;
+    genName(message->pid, message->tid, localFIFO);
 
-    struct Message *req = string2msg(request);
-    printf("Request:\n");
-    printMsg(req);
+    //reply message. recicles old message because most info is the same 
+    message->pid = getpid();
+    message->tid = pthread_self();
 
-    req_num++;
+    if((float)((currentTime - start)/CLOCKS_PER_SEC) < open_time) {
+        
+        //Increments request number 
+        pthread_mutex_lock(&req_num_lock);
+        req_num++;
+        pthread_mutex_unlock(&req_num_lock);
 
-    char prvt_fifoname[261];
-    genName(req->pid,req->tid,prvt_fifoname);
-
-    int fd = open(prvt_fifoname, O_WRONLY | O_NONBLOCK);
-
-    if (fd < 0)
-    {
-        printf("Thread could not open FIFO. Exiting ...\n");
-        return NULL;
+        message->pl = req_num;
+        usleep(message->dur * 1000); //use usleep bc time should be in the order of miliseconds and usleep is more precise
     }
-    
 
-    struct Message *res = createMsg(req->i,req->dur,req_num);
-    char s_res[256];
-    msg2string(res,s_res);
+    do {
+        fd = open(localFIFO, O_WRONLY);
 
-    write(fd,s_res,sizeof(s_res));
+        if (fd == -1) {
+            printf("Connecting to PRIVATE FIFO, please wait...\n");
+            sleep(5);
+        }
 
-    sleep(res->dur);
-    //printf("Response:\n");
-    //printMsg(res);
+    } while (fd == -1);
     
-    if (close(fd) != 0)
-    {
-        printf("Thread could not close FIFO. Exiting ...\n");
-        return NULL;
-    }
-    
-    
+    write(fd, message, sizeof(message));
+    close(fd);
+      
     return NULL;
 }
 
-int main(int argc, char const *argv[])
-{
-    BathroomParser *Bp = createBathroomParser();
+int main(int argc, char const *argv[]) {
+    start = clock();
 
-    if ((fillBathroomParser(argc, argv, Bp) != 0) || strlen(Bp->fifoname) == 0 || Bp->secs_f == 0)
+    BathroomParser * bp = createBathroomParser();
+
+    if ((fillBathroomParser(argc, argv, bp) != 0) || strlen(bp->fifoname) == 0 || bp->secs_f == 0)
     {
         printUsageServer();
+
+        destroyBathroomParser(bp);
+        return -1;
     }
-    else
+    
+    printBathroomParser(bp);
+
+    open_time = bp->nsecs;
+   
+    char fifoname[64];
+    strcpy(fifoname,bp->fifoname);
+
+    if (mkfifo(fifoname, 0660) != 0) {
+        printf("Error creating public FIFO, exiting...\n");
+        exit(1);
+    }
+
+    if (pthread_mutex_init(&req_num_lock, NULL) != 0)
     {
-        printBathroomParser(Bp);
-        time_t start, end;
-        double elapsed;
-
-
-        char fifoname[261];
-        strcpy(fifoname, "");
-
-        sprintf(fifoname, "/tmp/%s", Bp->fifoname);
-        mkfifo(fifoname, 0666);
-
-        int fd = open(fifoname, O_RDONLY | O_NONBLOCK);
-
-        if (fd < 0)
-        {
-            printf("Could not open public FIFO. Exiting ...\n");
-            exit(1);
-        }
-
-        threads = calloc(INITARRAY,sizeof(pthread_t));
-
-        char request[256];
-
-        time(&start);
-        time(&end);
-        int m = 0;
-        elapsed = difftime(end, start);
-        
-        while (elapsed <= Bp->nsecs)
-        {
-            m++;
-            time(&end);
-            elapsed = difftime(end, start);
-            read(fd, request, 256);
-
-            //If a request exists
-            if (strlen(request) > 0)
-            {
-                int i = 0;
-                int err = -1;
-                pthread_t p;
-                
-                //Creates threads
-                do{
-                    
-                    err = pthread_create(&p, NULL, processRequest, request);
-                    i++;
-                    if (i == 5)
-                    {
-                        printf("Error creating threads\n");
-                        exit(1);
-                    }
-                } while (err != 0);
-                
-                if (req_num < INITARRAY)
-                {
-                    threads[req_num] = p;
-                }
-                else
-                {
-                    threads = (pthread_t*) realloc(threads, sizeof(pthread_t) * (req_num + 1));
-                
-                    if (*threads)
-                    {
-                        threads[req_num] = p;
-                    }
-                    else
-                    {
-                        printf("Error reallocating thread array. Exiting ...\n");
-                        exit(1);
-                    }
-                }
-            }
-
-        }
-        //Joins all threads
-        for (int j = 0; j < req_num; j++)
-        {
-            pthread_join(threads[j],NULL);
-
-        }
-        
+        printf("Mutex init failed, exiting...\n");
+        exit(1);
     }
 
-    destroyBathroomParser(Bp);
-    return 0;
+    threads = calloc(INITARRAY,sizeof(pthread_t));
+
+    int fd = open(fifoname, O_RDONLY);
+
+    Message message;
+    while(read(fd, & message, sizeof(message) )>0) {
+        currentTime = clock();
+        printMsg(&message);
+
+
+        pthread_t tid;
+        //message must be void pointer because of the function create  
+        pthread_create(& tid, NULL, processRequest, (void *) & message);
+
+        if (req_num < INITARRAY)
+        {
+            threads[req_num] = tid;
+        }
+        else
+        {
+            threads = (pthread_t*) realloc(threads, sizeof(pthread_t) * (req_num + 1));
+            if (*threads)
+            {
+                threads[req_num] = tid;
+            }
+            else
+            {
+                printf("Error reallocating thread array. Exiting ...\n");
+                exit(1);
+            }
+        }
+    }
+    printf("==========================================================\n");
+
+
+    for (int i = 0; i < req_num; i++)
+    {
+        printf("I = %d || tid = %ld\n",i, threads[i]);
+        pthread_join(threads[i],NULL);
+    }
+    
+
+    close(fd);
+    pthread_mutex_destroy(&req_num_lock);
+    unlink(fifoname);
+
+    destroyBathroomParser(bp);
+    exit(0);
 }
