@@ -7,42 +7,44 @@ pthread_t * threads;
 
 void * sendRequest (void *arg) {
     int fd_local;
-    time_t t;
-    //seeding the rand func
-    srand((unsigned) time(&t));
 
-    Message message;
-    message.i = *(int *) arg;
-    message.pid = getpid();
-    message.tid = pthread_self();
-    //user sends -1 in place
-    message.pl = -1;
-    message.dur = (rand() % 500001) + 10000;
+    if(fd == -1) {
+        //---log CLOSED---//
+        return NULL;
+    }
 
-    printMsg(&message);
+    Message * message = (Message *) arg;
+    message->pid = getpid();
+    message->tid = pthread_self();
 
-    write(fd, &message, sizeof(message));
+    //---log IWANT---//
+    write(fd, message, sizeof(Message));
 
     char localFifo[64];
-    genName(message.pid, message.tid, localFifo);
+    genName(message->pid, message->tid, localFifo);
     
-    if (mkfifo(localFifo, 0660) != 0) {
-        printf("Error creating private FIFO\n");
+    if (mkfifo(localFifo, 0660) < 0) {
+        printf("Error creating private FIFO, exiting...\n");
         exit(1);
     }
 
-    fd_local = open(localFifo, O_RDONLY | O_NONBLOCK);
-
-
-    while (read(fd_local, & message, sizeof(message)) <= 0) {
-        usleep(10000);
+    if((fd_local = open(localFifo, O_RDONLY)) < 0) {
+        perror("Error OPENING private FIFO, exiting...\n");
+        exit(1);
     }
-    printMsg(&message);
 
-    if(message.pl != -1)
-    {
-        printf("IN!\n");
+    if (read(fd_local, message, sizeof(Message)) < 0) {
+        //---log FAILED---//
+        return NULL;
     }
+
+    if(message->pl == -1 && message->dur == -1) {
+       //---log CLOSED---//
+    }
+    //else
+        //---log IAMIN---//
+
+    printMsg(message);
 
     close(fd_local);
     unlink(localFifo);
@@ -59,62 +61,50 @@ int main(int argc, char const *argv[])
         return -1;
     }
     
-    printUser(user);
-    int currentTime = 0, i = 1;
+    int i = 1;
+    initClock();
     int maxTime = user->nsecs;
     char fifoname[64];
     strcpy(fifoname, user->fifoname);
-   
-    do
-    {
-        fd = open(fifoname, O_WRONLY | O_NONBLOCK);
+    srand(time(NULL));
 
-        if (fd == -1) {
-            printf("Connecting to PUBLIC FIFO, please wait...\n");
-            sleep(5);
-        }
-
-    } while (fd == -1);
+    fd = open(fifoname, O_WRONLY);
 
     threads = calloc(INITARRAY,sizeof(pthread_t));
 
-    while (currentTime < maxTime)
+    while (deltaTime() < maxTime)
     {
+        Message message;
+        message.i = i++;
+        message.pl = -1;
+        message.dur = (rand() % 50) + 1;
 
         pthread_t tid;
-        pthread_create(&tid, NULL, sendRequest, (void *) & i); //no point in sending more of info, just the id value
-        if (n_threads < INITARRAY)
-        {
+        pthread_create(&tid, NULL, sendRequest, (void *) & message);
+
+        if (n_threads < INITARRAY) {
             threads[n_threads] = tid;
         }
-        else
-        {
+        else {
             threads = (pthread_t*) realloc(threads, sizeof(pthread_t) * (n_threads + 1));
-            if (*threads)
-            {
+            if (*threads) {
                 threads[n_threads] = tid;
             }
-            else
-            {
+            else {
                 printf("Error reallocating thread array. Exiting ...\n");
                 exit(1);
             }
         }
         n_threads++;
 
-
-        i++;
-        currentTime += 1;
-        usleep(1000000); //time in microsseconds
+        usleep(50000); //time in microsseconds
     }
 
-    for (int i = 0; i < n_threads; i++)
-    {
-        printf("I = %d || tid = %ld\n",i, threads[i]);
+    for (int i = 0; i < n_threads; i++){
         pthread_join(threads[i],NULL);
     }
 
     close(fd);
     destroyUser(user);
-    exit(0);  
+    pthread_exit(0);  
 }

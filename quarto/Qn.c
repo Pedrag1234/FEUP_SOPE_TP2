@@ -1,73 +1,73 @@
 #include "Qn.h"
 
 //time is how long the server has been open, open_time is the max time the server CAN be open
-clock_t start,currentTime;
-float open_time = 0;
-
-pthread_t * threads;
-
-long int  req_num = 0;
+int open_time = 0, req_num = 0, isOpen = 0;
 pthread_mutex_t req_num_lock;
+pthread_t * threads;
 
 void * processRequest(void *arg) {
     Message * message = ( Message *) arg;
-    int fd;
+    int fd_local;
     char localFIFO[64];
+
+    printMsg(message);
 
     genName(message->pid, message->tid, localFIFO);
 
-    //reply message. recicles old message because most info is the same 
-    message->pid = getpid();
-    message->tid = pthread_self();
+    Message reply; 
+    reply.pid = getpid();
+    reply.tid = pthread_self();
+    reply.dur = message->dur;
+    reply.i = message->i;
+    reply.pl = -1;
+    //---log RECEIVED---//
 
-    if((float)((currentTime - start)/CLOCKS_PER_SEC) < open_time) {
-        
-        //Increments request number 
+    while((fd_local = open(localFIFO, O_WRONLY)) < 0) {
+        //---log GAVEUP---//
+        usleep(1000);
+    }
+
+    if(deltaTime() + message->dur * 1e-3  < open_time) {
         pthread_mutex_lock(&req_num_lock);
         req_num++;
         pthread_mutex_unlock(&req_num_lock);
-
-        message->pl = req_num;
-        usleep(message->dur * 1000); //use usleep bc time should be in the order of miliseconds and usleep is more precise
+        reply.pl = req_num;
+        //---log ENTER---//
+    }
+    else {
+        isOpen = 1;
+        reply.dur = -1;
+        //---log TOOLATE---//
     }
 
-    do {
-        fd = open(localFIFO, O_WRONLY);
-
-        if (fd == -1) {
-            printf("Connecting to PRIVATE FIFO, please wait...\n");
-            sleep(5);
-        }
-
-    } while (fd == -1);
+    //if(!isOpen)
+        //---log TIMEUP---//
     
-    write(fd, message, sizeof(message));
-    close(fd);
+    usleep(message->dur * 1000);
+    write(fd_local, &reply, sizeof(Message));
+    close(fd_local);
       
     return NULL;
 }
 
 int main(int argc, char const *argv[]) {
-    start = clock();
-
+    int fd;
+    pthread_t tid;
+    initClock();
     BathroomParser * bp = createBathroomParser();
 
-    if ((fillBathroomParser(argc, argv, bp) != 0) || strlen(bp->fifoname) == 0 || bp->secs_f == 0)
-    {
+    if ((fillBathroomParser(argc, argv, bp) != 0) || strlen(bp->fifoname) == 0 || bp->secs_f == 0) {
         printUsageServer();
-
         destroyBathroomParser(bp);
-        return -1;
+        exit(1);
     }
     
     printBathroomParser(bp);
-
     open_time = bp->nsecs;
-   
     char fifoname[64];
     strcpy(fifoname,bp->fifoname);
 
-    if (mkfifo(fifoname, 0660) != 0) {
+    if (mkfifo(fifoname, 0660) < 0) {
         printf("Error creating public FIFO, exiting...\n");
         exit(1);
     }
@@ -78,52 +78,45 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
 
+    if((fd = open(fifoname, O_RDONLY)) == -1)
+    {
+        perror("Error opening public FIFO, exiting...");
+        unlink(fifoname);
+        exit(1);
+    }
+
     threads = calloc(INITARRAY,sizeof(pthread_t));
 
-    int fd = open(fifoname, O_RDONLY);
+    do {
+        Message message;
+        if(read(fd, & message, sizeof(Message)) > 0 ) {
+            pthread_create(& tid, NULL, processRequest, (void *) & message);
+        }
 
-    Message message;
-    while(read(fd, & message, sizeof(message) )>0) {
-        currentTime = clock();
-        printMsg(&message);
-
-
-        pthread_t tid;
-        //message must be void pointer because of the function create  
-        pthread_create(& tid, NULL, processRequest, (void *) & message);
-
-        if (req_num < INITARRAY)
-        {
+        if (req_num < INITARRAY) {
             threads[req_num] = tid;
         }
-        else
-        {
+        else {
             threads = (pthread_t*) realloc(threads, sizeof(pthread_t) * (req_num + 1));
-            if (*threads)
-            {
+            if (*threads) {
                 threads[req_num] = tid;
             }
-            else
-            {
+            else {
                 printf("Error reallocating thread array. Exiting ...\n");
                 exit(1);
             }
         }
-    }
-    printf("==========================================================\n");
 
+    } while(deltaTime() < open_time);
 
-    for (int i = 0; i < req_num; i++)
-    {
-        printf("I = %d || tid = %ld\n",i, threads[i]);
+    for (int i = 0; i < req_num; i++) {
         pthread_join(threads[i],NULL);
     }
     
-
+    isOpen = 1;
     close(fd);
     pthread_mutex_destroy(&req_num_lock);
     unlink(fifoname);
-
     destroyBathroomParser(bp);
-    exit(0);
+    pthread_exit(0);
 }

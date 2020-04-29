@@ -11,8 +11,8 @@
 typedef struct Message
 {
     int i;
-    pid_t pid;
-    pthread_t tid;
+    int pid;
+    long tid;
     int dur;
     int pl;
 } Message;

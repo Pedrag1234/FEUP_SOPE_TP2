@@ -43,7 +43,7 @@ void logReg(int tid, int i, int dur, int pl, char *oper)
     write(STDOUT_FILENO, message, strlen(message));
 }
 
-void genName(pid_t pid, pthread_t tid, char *str)
+void genName(pid_t pid, long tid, char *str)
 {
     char spid[32], stid[32];
     char fifo[64] = "/tmp/";
@@ -64,4 +64,18 @@ void printUsageClient()
 void printUsageServer()
 {
     printf("./Qn <-t nsecs> [-l nplaces] [-n nthreads] fifoname\n");
+}
+
+void initClock() {
+    gettimeofday(&start, NULL);
+    delta = 0;
+}
+
+double deltaTime() {
+    gettimeofday(&currentTime, NULL);
+
+    delta = (currentTime.tv_sec - start.tv_sec) * 1e6;
+    delta = (delta + (currentTime.tv_usec - start.tv_usec)) * 1e-6;
+
+    return delta;
 }

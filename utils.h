@@ -1,6 +1,9 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#include <sys/types.h>
+#include <sys/time.h>
+
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
@@ -8,6 +11,10 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+struct timeval start;
+struct timeval currentTime;
+double delta;
 
 /**
  * @brief: checks if a string is made out entirely of digits
@@ -55,7 +62,7 @@ void logReg(int tid, int i, int dur, int pl, char *oper);
  * @return: name generated
  * 
 */
-void genName(pid_t pid, pthread_t tid, char *str);
+void genName(pid_t pid, long tid, char *str);
 
 /**
  * @brief: prints how to use the command for the Client Program
@@ -67,5 +74,9 @@ void printUsageClient();
  * 
 */
 void printUsageServer();
+
+void initClock();
+
+double deltaTime(); 
 
 #endif
