@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "message.h"
+
 struct timeval start;
 struct timeval currentTime;
 double delta;
@@ -42,16 +44,13 @@ void copyArray(int *dst, int *src);
 /**
  * @brief: writes the log msgs to the fd. 
  * 
- * @param tid: thread id
- * @param i: request id (or number)
- * @param dur: duration of usage
- * @param pl: assigned place in Qc
+ * @param m: message struct containing necessary info
  * @param oper: executed op that led to the writing in the fd
  * 
  * @return: none
  * 
 */
-void logReg(int tid, int i, int dur, int pl, char *oper);
+void logReg(Message * m, char *oper);
 
 /**
  * @brief: creates name for fifo according to spec
@@ -75,8 +74,16 @@ void printUsageClient();
 */
 void printUsageServer();
 
+/**
+ * @brief: initializes internal clock
+ * 
+*/
 void initClock();
 
+/**
+ * @brief: returns time passed since the beginning of execution
+ * 
+*/
 double deltaTime(); 
 
 #endif

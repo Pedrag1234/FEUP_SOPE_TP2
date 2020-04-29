@@ -33,14 +33,10 @@ void copyArray(int *dst, int *src)
     }
 }
 
-void logReg(int tid, int i, int dur, int pl, char *oper)
+void logReg(Message * m, char *oper)
 {
-    char *message;
-    message = (char *)malloc(128 * sizeof(char));
-    time_t t = time(NULL);
-
-    sprintf(message, "%ld ; %d ; %d ; %d ; %d ; %d ; %s\n", t, i, getpid(), tid, dur, pl, oper);
-    write(STDOUT_FILENO, message, strlen(message));
+    fprintf(stdout, "%.10ld ; %.4d ; %.6d ; %.6ld ; %.6d ; %d ; %s\n", time(NULL), m->i, m->pid , m->tid, m->dur, m->pl, oper);
+    fflush(stdout);
 }
 
 void genName(pid_t pid, long tid, char *str)

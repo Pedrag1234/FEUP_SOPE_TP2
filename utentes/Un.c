@@ -8,16 +8,16 @@ pthread_t * threads;
 void * sendRequest (void *arg) {
     int fd_local;
 
-    if(fd == -1) {
-        //---log CLOSED---//
-        return NULL;
-    }
-
     Message * message = (Message *) arg;
     message->pid = getpid();
     message->tid = pthread_self();
 
-    //---log IWANT---//
+    if(fd == -1) {
+        logReg(message, "CLOSD");
+        return NULL;
+    }
+
+    logReg(message, "IWANT");
     write(fd, message, sizeof(Message));
 
     char localFifo[64];
@@ -34,17 +34,14 @@ void * sendRequest (void *arg) {
     }
 
     if (read(fd_local, message, sizeof(Message)) < 0) {
-        //---log FAILED---//
+        logReg(message, "FAILD");
         return NULL;
     }
 
     if(message->pl == -1 && message->dur == -1) {
-       //---log CLOSED---//
+       logReg(message, "CLOSD");
     }
-    //else
-        //---log IAMIN---//
-
-    printMsg(message);
+    else logReg(message, "IAMIN");
 
     close(fd_local);
     unlink(localFifo);

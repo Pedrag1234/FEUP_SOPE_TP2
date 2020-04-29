@@ -10,7 +10,7 @@ void * processRequest(void *arg) {
     int fd_local;
     char localFIFO[64];
 
-    printMsg(message);
+    logReg(message, "RECVD");
 
     genName(message->pid, message->tid, localFIFO);
 
@@ -20,10 +20,9 @@ void * processRequest(void *arg) {
     reply.dur = message->dur;
     reply.i = message->i;
     reply.pl = -1;
-    //---log RECEIVED---//
 
     while((fd_local = open(localFIFO, O_WRONLY)) < 0) {
-        //---log GAVEUP---//
+        logReg(&reply, "GAVUP");
         usleep(1000);
     }
 
@@ -32,18 +31,17 @@ void * processRequest(void *arg) {
         req_num++;
         pthread_mutex_unlock(&req_num_lock);
         reply.pl = req_num;
-        //---log ENTER---//
+        logReg(&reply, "ENTER");
     }
     else {
         isOpen = 1;
         reply.dur = -1;
-        //---log TOOLATE---//
+        logReg(&reply, "2LATE");
     }
 
-    //if(!isOpen)
-        //---log TIMEUP---//
-    
     usleep(message->dur * 1000);
+    if(!isOpen) logReg(&reply, "TIMUP");
+    
     write(fd_local, &reply, sizeof(Message));
     close(fd_local);
       
@@ -78,7 +76,7 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
 
-    if((fd = open(fifoname, O_RDONLY)) == -1)
+    if((fd = open(fifoname, O_RDONLY | O_NONBLOCK)) == -1)
     {
         perror("Error opening public FIFO, exiting...");
         unlink(fifoname);
