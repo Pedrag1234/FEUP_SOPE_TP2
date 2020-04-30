@@ -88,7 +88,12 @@ int main(int argc, char const *argv[]) {
     do {
         Message message;
         if(read(fd, & message, sizeof(Message)) > 0 ) {
-            pthread_create(& tid, NULL, processRequest, (void *) & message);
+            int err = pthread_create(& tid, NULL, processRequest, (void *) & message);
+            if (err != 0)
+            {
+                break;
+            }
+            
         }
 
         if (req_num < INITARRAY) {

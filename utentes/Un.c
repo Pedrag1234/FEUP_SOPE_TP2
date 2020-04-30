@@ -77,7 +77,12 @@ int main(int argc, char const *argv[])
         message.dur = (rand() % 50) + 1;
 
         pthread_t tid;
-        pthread_create(&tid, NULL, sendRequest, (void *) & message);
+        int err = pthread_create(&tid, NULL, sendRequest, (void *) & message);
+        if (err != 0)
+        {
+            break;
+        }
+        
 
         if (n_threads < INITARRAY) {
             threads[n_threads] = tid;
