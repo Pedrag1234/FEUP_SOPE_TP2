@@ -9,7 +9,7 @@ Na pasta onde se encontra o makefile principal faça:
 make clean && make
 ```
 
-Em seguida pode executar os dois programas por qualquer ordem escrevendo os comandos:
+Executar os dois programas , em terminais separados,  primeiro o Q1 e de seguida o U1:
 ```
 ./Q1 <-t nsecs> <fifoname>
 ./U1 <-t nsecs> <fifoname>
@@ -77,6 +77,8 @@ Passado o tempo de execução definido, igualmente ao programa dos utentes, este
 2. Caso a criação de threads dê erro, o progama sai do ciclo de criação de threads e termina normalmente.
 
 3. O único sistema de sincronização presente no código é mutexes, e utilizado no servidor para aumentar o nº de pedidos tratados.
+
+4. No caso de o U1 ser executado primeiro, o programa cria na mesma as threads ,no entanto o registo do log a fase de operação será sempre CLOSD, dado que tenta abrir o FIFO apenas uma vez no início do programa e se não conseguir considera que o Quarto de Banho está fechado.
 
 
 
