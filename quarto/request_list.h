@@ -1,12 +1,12 @@
 #ifndef _REQUEST_LIST_H_
 #define _REQUEST_LIST_H_
 
-#include "message.h"
+#include "../message.h"
 
 typedef struct
 {
     int size;
-    char requests[1024][256];
+    char requests[1000000][256];
 } request_list;
 
 /**

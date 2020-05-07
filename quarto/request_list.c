@@ -5,7 +5,7 @@ request_list *createList()
     request_list *l = (request_list *)malloc(sizeof(request_list));
 
     l->size = 0;
-    for (int i = 0; i < 1024; i++)
+    for (int i = 0; i < 1000000; i++)
     {
         strcpy(l->requests[i], "");
     }
@@ -32,7 +32,7 @@ void requestProcessed(request_list *r)
     r->size -= 1;
     for (int i = 0; i < r->size; i++)
     {
-        if (i == 1023)
+        if (i < 100000)
         {
             strcpy(r->requests[i], "");
         }

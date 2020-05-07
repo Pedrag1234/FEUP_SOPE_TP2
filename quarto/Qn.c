@@ -1,12 +1,15 @@
 #include "Qn.h"
 
 //time is how long the server has been open, open_time is the max time the server CAN be open
-int open_time = 0, req_num = 0, isOpen = 0;
-pthread_mutex_t req_num_lock;
+
+ 
+int open_time = 0, req_num = 0, isOpen = 0, max_bathrooms = 0, *bathrooms;
+pthread_mutex_t req_num_lock, bathroom_in_lock, bathroom_out_lock;
 pthread_t * threads;
 
 void * processRequest(void *arg) {
     Message * message = ( Message *) arg;
+    int pl = 0;
     int fd_local;
     char localFIFO[64];
 
@@ -30,8 +33,50 @@ void * processRequest(void *arg) {
         pthread_mutex_lock(&req_num_lock);
         req_num++;
         pthread_mutex_unlock(&req_num_lock);
-        reply.pl = req_num;
-        logReg(&reply, "ENTER");
+
+        if (max_bathrooms == 0)
+        {
+            reply.pl = req_num;
+            logReg(&reply, "ENTER");
+        }
+        else
+        {
+            int ocp = 0;
+            for (int i = 0; i < max_bathrooms; i++)
+            {
+                if (bathrooms[i] == 1)
+                {
+                    ocp++;
+                }
+                
+            }
+            
+            if (ocp < max_bathrooms)
+            {
+                pthread_mutex_lock(&bathroom_in_lock);
+                for (int i = 0; i < max_bathrooms; i++)
+                {
+                    if (bathrooms[i] == 0)
+                    {
+                        pl = i;
+                        bathrooms[i] = 1;
+                        reply.pl = i + 1;
+                        logReg(&reply, "ENTER");
+                        break;
+                    }
+                
+                }
+                pthread_mutex_unlock(&bathroom_in_lock);
+            }
+            else
+            {
+                reply.pl = -1;
+                logReg(&reply, "ENTER");
+            }
+            
+            
+        }
+
     }
     else {
         isOpen = 1;
@@ -39,11 +84,20 @@ void * processRequest(void *arg) {
         logReg(&reply, "2LATE");
     }
 
-    usleep(message->dur * 1000);
+    if(reply.pl > 0){
+        usleep(message->dur * 1000);
+    }
+        
+        
     if(!isOpen) logReg(&reply, "TIMUP");
     
     write(fd_local, &reply, sizeof(Message));
     close(fd_local);
+
+    pthread_mutex_lock(&bathroom_out_lock);
+    if (reply.pl != -1)
+        bathrooms[pl] = 0;
+    pthread_mutex_unlock(&bathroom_out_lock);
       
     return NULL;
 }
@@ -76,6 +130,18 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
 
+    if (pthread_mutex_init(&bathroom_in_lock, NULL) != 0)
+    {
+        printf("Mutex init failed, exiting...\n");
+        exit(1);
+    }
+
+    if (pthread_mutex_init(&bathroom_out_lock, NULL) != 0)
+    {
+        printf("Mutex init failed, exiting...\n");
+        exit(1);
+    }
+
     if((fd = open(fifoname, O_RDONLY | O_NONBLOCK)) == -1)
     {
         perror("Error opening public FIFO, exiting...");
@@ -83,6 +149,17 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
 
+    if (bp->place_f != 0 && bp->nplaces != 0)
+    {
+        max_bathrooms = bp->nplaces;
+        bathrooms = calloc(max_bathrooms,sizeof(int));
+        for (int i = 0; i < max_bathrooms; i++)
+        {
+            bathrooms[i] = 0;
+        }
+        
+    }
+    
     threads = calloc(INITARRAY,sizeof(pthread_t));
 
     do {
