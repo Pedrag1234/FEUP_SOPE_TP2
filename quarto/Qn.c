@@ -64,7 +64,6 @@ void * processRequest(void *arg) {
                         logReg(&reply, "ENTER");
                         break;
                     }
-                
                 }
                 pthread_mutex_unlock(&bathroom_in_lock);
             }
@@ -95,8 +94,9 @@ void * processRequest(void *arg) {
     close(fd_local);
 
     pthread_mutex_lock(&bathroom_out_lock);
-    if (reply.pl != -1)
+    if (reply.pl != -1 && max_bathrooms != 0){
         bathrooms[pl] = 0;
+    } 
     pthread_mutex_unlock(&bathroom_out_lock);
       
     return NULL;
