@@ -1,15 +1,20 @@
 #include "Qn.h"
 
-//time is how long the server has been open, open_time is the max time the server CAN be open
-
- 
-int open_time = 0, req_num = 0, isOpen = 0, max_bathrooms = 0, *bathrooms;
-pthread_mutex_t req_num_lock, bathroom_in_lock, bathroom_out_lock;
+int open_time = 0, req_num = 0, isOpen = 0;
+//int max_bathrooms = 0, *bathrooms;
+pthread_mutex_t req_num_lock;
+//pthread_mutex_t bathroom_in_lock, bathroom_out_lock;
 pthread_t * threads;
+
+//flags for threads and capacity
+int threadsFlag = 0;
+int placesFlag = 0;
+
+sem_t nThreads;
+sem_t nPlaces;
 
 void * processRequest(void *arg) {
     Message * message = ( Message *) arg;
-    int pl = 0;
     int fd_local;
     char localFIFO[64];
 
@@ -24,8 +29,9 @@ void * processRequest(void *arg) {
     reply.i = message->i;
     reply.pl = -1;
 
-    while((fd_local = open(localFIFO, O_WRONLY)) < 0) {
+    if((fd_local = open(localFIFO, O_WRONLY | O_NONBLOCK)) < 0) {
         logReg(&reply, "GAVUP");
+        if(threadsFlag) sem_post(nThreads); //unlocks semaphore
         usleep(1000);
     }
 
@@ -33,49 +39,8 @@ void * processRequest(void *arg) {
         pthread_mutex_lock(&req_num_lock);
         req_num++;
         pthread_mutex_unlock(&req_num_lock);
-
-        if (max_bathrooms == 0)
-        {
-            reply.pl = req_num;
-            logReg(&reply, "ENTER");
-        }
-        else
-        {
-            int ocp = 0;
-            for (int i = 0; i < max_bathrooms; i++)
-            {
-                if (bathrooms[i] == 1)
-                {
-                    ocp++;
-                }
-                
-            }
-            
-            if (ocp < max_bathrooms)
-            {
-                pthread_mutex_lock(&bathroom_in_lock);
-                for (int i = 0; i < max_bathrooms; i++)
-                {
-                    if (bathrooms[i] == 0)
-                    {
-                        pl = i;
-                        bathrooms[i] = 1;
-                        reply.pl = i + 1;
-                        logReg(&reply, "ENTER");
-                        break;
-                    }
-                }
-                pthread_mutex_unlock(&bathroom_in_lock);
-            }
-            else
-            {
-                reply.pl = -1;
-                logReg(&reply, "ENTER");
-            }
-            
-            
-        }
-
+        reply.pl = req_num;
+        logReg(&reply, "ENTER");
     }
     else {
         isOpen = 1;
@@ -86,19 +51,17 @@ void * processRequest(void *arg) {
     if(reply.pl > 0){
         usleep(message->dur * 1000);
     }
-        
-        
-    if(!isOpen) logReg(&reply, "TIMUP");
-    
-    write(fd_local, &reply, sizeof(Message));
-    close(fd_local);
 
-    pthread_mutex_lock(&bathroom_out_lock);
-    if (reply.pl != -1 && max_bathrooms != 0){
-        bathrooms[pl] = 0;
-    } 
-    pthread_mutex_unlock(&bathroom_out_lock);
+    if(write(fd_local, &reply, sizeof(Message)) <= 0){
+        logReg(&reply, 'GAVUP');
+        if(threadsFlag) sem_post(&nThreads);
+    }   
+              
+    if(!isOpen) logReg(&reply, "TIMUP");
+
+    close(fd_local);
       
+    if(threadsFlag) sem_post(&nThreads);
     return NULL;
 }
 
@@ -115,30 +78,26 @@ int main(int argc, char const *argv[]) {
     }
     
     printBathroomParser(bp);
+
+    //check wether or not there's a place/threads limit
+    if(bp->nplaces > 0)
+        placesFlag = 1;
+    
+    if(bp->nthreads > 0)
+        threadsFlag = 0;
+
     open_time = bp->nsecs;
     char fifoname[64];
     strcpy(fifoname,bp->fifoname);
 
     if (mkfifo(fifoname, 0660) < 0) {
-        printf("Error creating public FIFO, exiting...\n");
+        perror("Error creating public FIFO, exiting...\n");
         exit(1);
     }
 
     if (pthread_mutex_init(&req_num_lock, NULL) != 0)
     {
-        printf("Mutex init failed, exiting...\n");
-        exit(1);
-    }
-
-    if (pthread_mutex_init(&bathroom_in_lock, NULL) != 0)
-    {
-        printf("Mutex init failed, exiting...\n");
-        exit(1);
-    }
-
-    if (pthread_mutex_init(&bathroom_out_lock, NULL) != 0)
-    {
-        printf("Mutex init failed, exiting...\n");
+        perror("Mutex init for request counter failed, exiting...\n");
         exit(1);
     }
 
@@ -148,29 +107,19 @@ int main(int argc, char const *argv[]) {
         unlink(fifoname);
         exit(1);
     }
-
-    if (bp->place_f != 0 && bp->nplaces != 0)
-    {
-        max_bathrooms = bp->nplaces;
-        bathrooms = calloc(max_bathrooms,sizeof(int));
-        for (int i = 0; i < max_bathrooms; i++)
-        {
-            bathrooms[i] = 0;
-        }
-        
-    }
     
     threads = calloc(INITARRAY,sizeof(pthread_t));
+
+    //initialize semaphores: sem_t, 0 is for threads, value for each semaphore (how many are 'allowed' to enter before being stopped)
+    if(placesFlag) sem_init(&nPlaces, 0, bp->nplaces);
+    if(threadsFlag) sem_init(&nThreads, 0, bp->nthreads);
 
     do {
         Message message;
         if(read(fd, & message, sizeof(Message)) > 0 ) {
+            if(threadsFlag) sem_wait(&nThreads); //if threads are defined, lock thread semaphore
             int err = pthread_create(& tid, NULL, processRequest, (void *) & message);
-            if (err != 0)
-            {
-                break;
-            }
-            
+            if (err != 0) break;    
         }
 
         if (req_num < INITARRAY) {
@@ -182,11 +131,10 @@ int main(int argc, char const *argv[]) {
                 threads[req_num] = tid;
             }
             else {
-                printf("Error reallocating thread array. Exiting ...\n");
+                perror("Error reallocating thread array. Exiting ...\n");
                 exit(1);
             }
         }
-
     } while(deltaTime() < open_time);
 
     for (int i = 0; i < req_num; i++) {

@@ -1,6 +1,5 @@
 #include "Un.h"
 
-//this fd must be global to guarantee we are writing to the right place
 int fd;
 long int n_threads = 0;
 pthread_t * threads;
@@ -14,7 +13,7 @@ void * sendRequest (void *arg) {
 
     if(fd == -1) {
         logReg(message, "CLOSD");
-        return NULL;
+        pthread_exit(NULL);
     }
 
     logReg(message, "IWANT");
@@ -24,7 +23,12 @@ void * sendRequest (void *arg) {
     genName(message->pid, message->tid, localFifo);
     
     if (mkfifo(localFifo, 0660) < 0) {
-        printf("Error creating private FIFO, exiting...\n");
+        if(errno == EEXIST) {
+            perror("Error creating private FIFO: already exists. Exiting...\n");
+        } else {
+            perror("Error creating private FIFO, exiting...\n");
+        }
+
         exit(1);
     }
 
@@ -74,7 +78,7 @@ int main(int argc, char const *argv[])
         Message message;
         message.i = i++;
         message.pl = -1;
-        message.dur = (rand() % 50) + 1;
+        message.dur = (rand() % 100) + 1;
 
         pthread_t tid;
         int err = pthread_create(&tid, NULL, sendRequest, (void *) & message);
@@ -93,13 +97,13 @@ int main(int argc, char const *argv[])
                 threads[n_threads] = tid;
             }
             else {
-                printf("Error reallocating thread array. Exiting ...\n");
+                perror("Error reallocating thread array. Exiting ...\n");
                 exit(1);
             }
         }
         n_threads++;
 
-        usleep(50000); //time in microsseconds
+        usleep(50000);
     }
 
     for (int i = 0; i < n_threads; i++){
