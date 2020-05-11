@@ -15,6 +15,7 @@
 
 #include "BathroomParser.h"
 #include "../message.h"
+#include "../request_list.h"
 
 #define INITARRAY 1000000
 

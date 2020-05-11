@@ -1,9 +1,7 @@
 #include "Qn.h"
 
 int open_time = 0, req_num = 0, isOpen = 0;
-//int max_bathrooms = 0, *bathrooms;
 pthread_mutex_t req_num_lock;
-//pthread_mutex_t bathroom_in_lock, bathroom_out_lock;
 pthread_t * threads;
 
 //flags for threads and capacity
@@ -12,6 +10,9 @@ int placesFlag = 0;
 
 sem_t nThreads;
 sem_t nPlaces;
+
+//For limited places attribution
+Queue queue;
 
 void * processRequest(void *arg) {
     Message * message = ( Message *) arg;
@@ -31,14 +32,26 @@ void * processRequest(void *arg) {
 
     if((fd_local = open(localFIFO, O_WRONLY | O_NONBLOCK)) < 0) {
         logReg(&reply, "GAVUP");
-        if(threadsFlag) sem_post(nThreads); //unlocks semaphore
+        if(threadsFlag) sem_post(&nThreads); //unlocks semaphore
         usleep(1000);
     }
 
+    int assignedPlace;
     if(deltaTime() + message->dur * 1e-3  < open_time) {
-        pthread_mutex_lock(&req_num_lock);
-        req_num++;
-        pthread_mutex_unlock(&req_num_lock);
+
+        if(placesFlag) {
+            sem_wait(&nPlaces);
+            pthread_mutex_lock(&req_num_lock);
+            assignedPlace = add(&queue);
+            pthread_mutex_unlock(&req_num_lock);
+        }
+        else {
+            pthread_mutex_lock(&req_num_lock);
+            assignedPlace = req_num;
+            req_num++;
+            pthread_mutex_unlock(&req_num_lock);
+        }
+
         reply.pl = req_num;
         logReg(&reply, "ENTER");
     }
@@ -53,8 +66,15 @@ void * processRequest(void *arg) {
     }
 
     if(write(fd_local, &reply, sizeof(Message)) <= 0){
-        logReg(&reply, 'GAVUP');
+        logReg(&reply, "GAVUP");
         if(threadsFlag) sem_post(&nThreads);
+
+        if(placesFlag) {
+            pthread_mutex_lock(&req_num_lock);
+            fillPlace(&queue, assignedPlace);
+            pthread_mutex_unlock(&req_num_lock);
+            sem_post(&nPlaces);
+        }
     }   
               
     if(!isOpen) logReg(&reply, "TIMUP");
@@ -62,6 +82,14 @@ void * processRequest(void *arg) {
     close(fd_local);
       
     if(threadsFlag) sem_post(&nThreads);
+
+    if(placesFlag) {
+        pthread_mutex_lock(&req_num_lock);
+        fillPlace(&queue, assignedPlace);
+        pthread_mutex_unlock(&req_num_lock);
+        sem_post(&nPlaces);
+    }
+
     return NULL;
 }
 
@@ -111,7 +139,13 @@ int main(int argc, char const *argv[]) {
     threads = calloc(INITARRAY,sizeof(pthread_t));
 
     //initialize semaphores: sem_t, 0 is for threads, value for each semaphore (how many are 'allowed' to enter before being stopped)
-    if(placesFlag) sem_init(&nPlaces, 0, bp->nplaces);
+    //also initialize queue for place maintenance
+    if(placesFlag){
+        sem_init(&nPlaces, 0, bp->nplaces);
+        queue = createQueue(bp->nplaces);
+        fill(&queue);
+    }
+
     if(threadsFlag) sem_init(&nThreads, 0, bp->nthreads);
 
     do {
