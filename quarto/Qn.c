@@ -52,7 +52,7 @@ void * processRequest(void *arg) {
             pthread_mutex_unlock(&req_num_lock);
         }
 
-        reply.pl = req_num;
+        reply.pl = assignedPlace;
         logReg(&reply, "ENTER");
     }
     else {

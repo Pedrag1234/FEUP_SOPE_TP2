@@ -78,7 +78,7 @@ int main(int argc, char const *argv[])
         Message message;
         message.i = i++;
         message.pl = -1;
-        message.dur = (rand() % 100) + 1;
+        message.dur = (rand() % 200) + 50;
 
         pthread_t tid;
         int err = pthread_create(&tid, NULL, sendRequest, (void *) & message);
@@ -103,7 +103,7 @@ int main(int argc, char const *argv[])
         }
         n_threads++;
 
-        usleep(50000);
+        usleep(20000);
     }
 
     for (int i = 0; i < n_threads; i++){
