@@ -105,7 +105,7 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
     
-    printBathroomParser(bp);
+    //printBathroomParser(bp);
 
     //check wether or not there's a place/threads limit
     if(bp->nplaces > 0)
