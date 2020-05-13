@@ -176,8 +176,14 @@ int main(int argc, char const *argv[]) {
     }
     
     isOpen = 1;
+
     close(fd);
+
     pthread_mutex_destroy(&req_num_lock);
+
+    sem_destroy(&nPlaces);
+    sem_destroy(&nThreads);
+
     unlink(fifoname);
     destroyBathroomParser(bp);
     pthread_exit(0);
