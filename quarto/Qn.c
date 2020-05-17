@@ -14,8 +14,13 @@ sem_t nPlaces;
 //For limited places attribution
 Queue queue;
 
+// Processes requests sent by U2
 void *processRequest(void *arg)
 {
+    /**
+     *  resources are automatically released back to the system 
+     * without the need for another thread to join with the terminated thread  
+    */
     pthread_detach(pthread_self());
     Message *message = (Message *)arg;
     int fd_local;
@@ -32,6 +37,7 @@ void *processRequest(void *arg)
     reply.i = message->i;
     reply.pl = -1;
 
+    //Atempts to open response FIFO
     if ((fd_local = open(localFIFO, O_WRONLY | O_NONBLOCK)) < 0)
     {
         logReg(&reply, "GAVUP");
@@ -41,20 +47,26 @@ void *processRequest(void *arg)
         pthread_exit(NULL);
     }
 
+
     int assignedPlace;
+    //if the program is open or not
     if (deltaTime() + message->dur * 1e-3 < open_time)
     {
-
+        
         if (placesFlag)
         {
+            //Locks the creation of threads in case o reching limit of max threads
             sem_wait(&nPlaces);
+
             pthread_mutex_lock(&req_num_lock);
+            //sets assigned place to the first free spot
             assignedPlace = add(&queue);
             pthread_mutex_unlock(&req_num_lock);
         }
         else
         {
             pthread_mutex_lock(&req_num_lock);
+             //sets assigned place to the number of request
             assignedPlace = req_num;
             req_num++;
             pthread_mutex_unlock(&req_num_lock);
@@ -70,11 +82,13 @@ void *processRequest(void *arg)
         logReg(&reply, "2LATE");
     }
 
+    //wait for requested time
     if (reply.pl > 0)
     {
         usleep(message->dur * 1000);
     }
 
+    //write response to the thread that requested
     if (write(fd_local, &reply, sizeof(Message)) <= 0)
     {
         logReg(&reply, "GAVUP");
@@ -83,6 +97,7 @@ void *processRequest(void *arg)
 
         if (placesFlag)
         {
+            //free place used and add it to the queue again
             pthread_mutex_lock(&req_num_lock);
             fillPlace(&queue, assignedPlace);
             pthread_mutex_unlock(&req_num_lock);
@@ -135,6 +150,7 @@ int main(int argc, char const *argv[])
     char fifoname[64];
     strcpy(fifoname, bp->fifoname);
 
+    //Open and create FIFO, Mutexes and Semaphores
     if (mkfifo(fifoname, 0660) < 0)
     {
         perror("Error creating public FIFO, exiting...\n");
@@ -154,7 +170,6 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
-    //threads = calloc(INITARRAY,sizeof(pthread_t));
 
     //initialize semaphores: sem_t, 0 is for threads, value for each semaphore (how many are 'allowed' to enter before being stopped)
     //also initialize queue for place maintenance
@@ -176,33 +191,19 @@ int main(int argc, char const *argv[])
             if (threadsFlag)
                 sem_wait(&nThreads); //if threads are defined, lock thread semaphore
 
+            //Create threads
             pthread_t tid;
             int err = pthread_create(&tid, NULL, processRequest, (void *)&message);
             if (err != 0)
                 break;
         }
 
-        // if (req_num < INITARRAY) {
-        //     threads[req_num] = tid;
-        // }
-        // else {
-        //     threads = (pthread_t*) realloc(threads, sizeof(pthread_t) * (req_num + 1));
-        //     if (*threads) {
-        //         threads[req_num] = tid;
-        //     }
-        //     else {
-        //         perror("Error reallocating thread array. Exiting ...\n");
-        //         exit(1);
-        //     }
-        // }
     } while (deltaTime() < open_time);
 
-    // for (int i = 0; i < req_num; i++) {
-    //     pthread_join(threads[i],NULL);
-    // }
 
     isOpen = 1;
 
+    //Free resources allocated by program
     close(fd);
 
     pthread_mutex_destroy(&req_num_lock);
